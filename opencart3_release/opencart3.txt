@@ -13,11 +13,11 @@ catalog-language.php            | upload/catalog/language/en-gb/extension/paymen
 catalog-model.php               | upload/catalog/model/extension/payment/polkadot.php
 catalog-template.twig           | upload/catalog/view/theme/default/template/extension/payment/polkadot.twig
 
-add/image/ajaxm.gif           | upload/catalog/view/theme/default/image/polkadot/*
-add/image/Alzymologist_.png   | upload/catalog/view/theme/default/image/polkadot/*
-add/image/polkadot.webp       | upload/catalog/view/theme/default/image/polkadot/*
+../../common/img/ajaxm.gif           | upload/catalog/view/theme/default/image/polkadot/*
+../../common/img/Alzymologist_.png   | upload/catalog/view/theme/default/image/polkadot/*
+../../common/img/polkadot.webp       | upload/catalog/view/theme/default/image/polkadot/*
 
-DOT.js                                     | upload/catalog/view/javascript/polkadot/*
+../../common/DOT.js                                     | upload/catalog/view/javascript/polkadot/*
 
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-api.js             | upload/catalog/view/javascript/polkadot/*
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-extension-dapp.js  | upload/catalog/view/javascript/polkadot/*
@@ -26,6 +26,4 @@ https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkado
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util-crypto.js     | upload/catalog/view/javascript/polkadot/*
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util.js            | upload/catalog/view/javascript/polkadot/*
 
-add/js/identicon.js                      | upload/catalog/view/javascript/polkadot/*
-add/js/identicon.wasm                    | upload/catalog/view/javascript/polkadot/*
-add/js/identicon-wasm.js                 | upload/catalog/view/javascript/polkadot/*
+../../common/identicon.js                      | upload/catalog/view/javascript/polkadot/*

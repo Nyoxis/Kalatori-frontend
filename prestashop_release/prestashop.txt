@@ -4,12 +4,17 @@
 ### file_from | file_to
 ###
 
+../../common/img/logo.png |*
+composer.lock      |*
+ps_dotpayment.php  |*
+config.xml         |*
+composer.json      |*
 
 views/templates/front/dotpay.tpl | views/templates/front/*
 views/templates/hook/infos.tpl   | views/templates/hook/*
 
-views/js/DOT.js			| views/js/*
-views/js/identicon.js		| views/js/*
+../../common/DOT.js		| views/js/*
+../../common/identicon.js		| views/js/*
 
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-api.js             | views/js/*
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-extension-dapp.js  | views/js/*
@@ -18,16 +23,10 @@ https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkado
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util-crypto.js     | views/js/*
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util.js            | views/js/*
 
-views/img/Alzymologist_.png | views/img/*
-views/img/polkadot.png      | views/img/*
-views/img/ajaxm.gif         | views/img/*
+../../common/img/Alzymologist_.png | views/img/*
+../../common/img/polkadot.png      | views/img/*
+../../common/img/ajaxm.gif         | views/img/*
 
 controllers/front/ajax.php         | controllers/front/*
 controllers/front/payment.php      | controllers/front/*
 controllers/front/validation.php   | controllers/front/*
-
-logo.png           |*
-composer.lock      |*
-ps_dotpayment.php  |*
-config.xml         |*
-composer.json      |*

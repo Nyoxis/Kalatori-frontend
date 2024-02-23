@@ -3,10 +3,10 @@
 <?php
 
 $FROM="./src";
-$s=file_get_contents($FROM."/s3.txt");
+$s=file_get_contents("./opencart3.txt");
 
 $TO="/tmp/UPUPO";
-$ZIP=$_SERVER['PWD']."/polkadot-opencart3.ocmod.zip";
+$ZIP=$_SERVER['PWD']."/polkadot-opencart3_".date("Y-m-d_H-i").".ocmod.zip";
 
 exec("rm -r \"".$TO."\"");
 
