@@ -74,10 +74,10 @@ presta_init: function(cx) {
 
     // определяем процедуру включения основной платежной кнопки
     DOT.button_on=function(){
-        document.querySelectorAll("BUTTON[type='submit'][disabled]").forEach(function(e){
+        document.querySelectorAll("BUTTON[type='submit'].disabled").forEach(function(e){
 	    e.classList.remove("disabled");
 	    e.disabled=null;
-	    e.style.border='1px dashed red';
+	    // e.style.border='1px dashed red';
 	});
     };
 
@@ -246,17 +246,26 @@ daemon_get_info: async function() {
 		DOT.amount_human=Math.floor(DOT.amount/DOT.chain.mul*10000)/10000+' '+DOT.chain.tokenSymbol; // DOT.daemon.currency_name;
 
 		DOT.dom('dotpay_info').innerHTML=
+		    "Amount: "+DOT.indot( DOT.cx.total*DOT.chain.mul + DOT.chain.partialFee)
+		    +"<br>Covers price of kit(s), transaction fee and deposit in your Polkadot account"
+		    +"<br>&nbsp;";
+
+		// DOT.dom('dotpay_info').setAttribute('title','ssssssssssss');
+		// DOT.dom('dotpay_info').setAttribute('alt','ssssssssssss');
+
+/*
 		    "Amount: "+DOT.indot( DOT.cx.total*DOT.chain.mul + DOT.chain.partialFee, 'planks')
 		    +"<br>Minimum balance: "+DOT.indot( DOT.cx.total*DOT.chain.mul + DOT.chain.partialFee + DOT.chain.existentialDeposit, 'planks')
 		    +"<br>"+DOT.indot(DOT.cx.total*DOT.chain.mul)+" * 10<sup>"+DOT.chain.tokenDecimals+"</sup> + "+DOT.chain.partialFee+" fee"
 		    +" and "+DOT.indot(DOT.chain.existentialDeposit)+" on deposit";
+*/
 	    }
 	},
 	data
     );
 },
 
-indot: function(x,planks) { return (Math.floor( x/DOT.chain.mul*10000 ) /10000) + " "+DOT.chain.tokenSymbol+(planks?" ("+x+" planks)":''); },
+indot: function(x,planks) { return (Math.floor( parseInt(x)/DOT.chain.mul*10000 ) /10000) + " "+DOT.chain.tokenSymbol+(planks?" ("+x+" planks)":''); },
 
 ajax_process_errors: function(s0) {
 
@@ -489,13 +498,13 @@ AJAX: function(url,opt,s) {
 
 	DOT.Talert('payment_done!');
 	var e = await DOT.api.query.system.account( destination );
-	DOT.Talert('Finish balance = '+ e.data.free );
+	DOT.Talert('Ending balance = '+ e.data.free );
 
 	if(1*e.data.free == 0) {
 	    DOT.progress.stop();
-	    DOT.Talert('Transfer error!');
 	    DOT.button_on();
-	    alert('Transfer error!');
+	    DOT.Talert('Transfer error');
+	    alert('Transfer error');
 	    return;
 	}
 
@@ -518,7 +527,31 @@ AJAX: function(url,opt,s) {
     },
 
     pay: async function(json) {
-	DOT.alert("Pay account: "+json.pay_account+"<br>Order id: "+json.order_id);
+	if(json.my_account == 'QR') {
+
+
+	    DOT.alert("Transfer <b>"+DOT.indot( DOT.amount, 'planks' )+"</b> manualy to:"
+		+"<div style='padding:10px 0 10px 0;font-weight:bold;font-size:1.1em'><a onclick='DOT.cpbuf(this.innerHTML); return false;'>"+DOT.id2west(json.pay_account)+"</a>"
+		+"<div style='font-size:8px;'>"+json.pay_account+"</div>"
+		+"<div>Balance: <span class='my_dot_balance'><img src='"+DOT.ajaxm+"'></span></div>"
+		+"</div>"
+		// +"<br>Order id: "+json.order_id
+		+"and press button again"
+	    );
+
+	    await DOT.connect();
+	    var x = await DOT.api.query.system.account( json.pay_account );
+	    document.querySelectorAll('.my_dot_balance').forEach((e)=>{e.innerHTML=DOT.indot( x.data.free,'planks')});
+
+	    DOT.button_on();
+
+	    // eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+	    return;
+	}
+	DOT.alert("Transfer <b>"+DOT.indot( 1*DOT.amount, 'planks' )+"</b> to:"
+		+"<div style='font-weight:bold;'><a onclick='DOT.cpbuf(this.innerHTML); return false;'>"+DOT.id2west(json.pay_account)+"</a></div>"
+		+"<div style='font-size:8px;'>"+json.pay_account+"</div>"
+		+"<br>Order id: "+json.order_id);
 	DOT.payWithPolkadot(json, json.my_account, DOT.amount, json.pay_account);
     },
 
@@ -546,10 +579,10 @@ AJAX: function(url,opt,s) {
 	DOT.wallets=wallets;
 
 	var r={'manual':[
-		"<label style='display:flex;text-align:left;' balanced='1'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>QR-code</label>",
+		"<label style='display:flex;text-align:left;' balanced='1'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>Manual</label>",
 	]};
         if( !wallets.length ) {
-	    if(!DOT.et) DOT.alert("<b>Wallets not found</b>"
+	    if(!DOT.et) DOT.alert("<b>Wallet not found</b>"
 		    +"<br>You can use Wallet extention "
 		    +(this.navigator()=='firefox'
 			? "<a href='https://addons.mozilla.org/en-US/firefox/addon/polkadot-js-extension/'>polkadot{.js} for Firefox</a>"
@@ -660,6 +693,9 @@ AJAX: function(url,opt,s) {
 	return polkadotUtil.u8aToHex(polkadotKeyring.decodeAddress(west));
     },
 
+    id2west: function(id){
+	return polkadotKeyring.encodeAddress(id,DOT.chain.ss58Format);
+    },
 
     disconnect: async function() {
 	if(!DOT.api) return;
@@ -736,4 +772,16 @@ AJAX: function(url,opt,s) {
  LOADS_promice: function(file,sync) {
         return new Promise(function(resolve, reject) { DOT.LOADS(file,resolve,reject,sync); });
  },
+
+ cpbuf: function(e,message){ if(typeof(e)=='object') e=e.innerHTML;
+    var area = document.createElement('textarea');
+    document.body.appendChild(area);
+    area.value = e;
+    area.select();
+    document.execCommand('copy');
+    document.body.removeChild(area);
+    // if(message)
+    alert('Copy:<p><b>'+(DOT.h(e).replace(/\n/g,'<br>'))+'</b>');
+ },
+
 };
