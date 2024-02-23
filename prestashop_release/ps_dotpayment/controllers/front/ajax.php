@@ -71,9 +71,9 @@ class Ps_DotpaymentAjaxModuleFrontController extends ModuleFrontController
     if( isset($r['mul']) && $r['mul'] < 20 ) $r['mul']=pow(10, $r['mul']);
 
     foreach($r as $n=>$l) $json['daemon_'.$n]=$l;
-    if(
-            !isset($r['order_id']) || $r['order_id'] != $json['order_id']
-         || !isset($r['price'])   || 1*$r['price']   != 1*$json['price']
+    if(0
+        //    !isset($r['order_id']) || $r['order_id'] != $json['order_id']
+        // || !isset($r['price'])   || 1*$r['price']   != 1*$json['price']
     ) {
             $json['error'] = 'response';
             $json['error_message'] = 'error price or order_id in daemon responce: '

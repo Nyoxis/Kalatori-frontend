@@ -5,7 +5,7 @@
     <div id="WalletID_load" style='display:none'><img src='{$module_host nofilter}/img/ajaxm.gif'> <font color='green'>loading...</font></div>
 
     <div style='padding-left:30px;' id="WalletID" class="form-control">
-	<label style='display:block;text-align:left;'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>QR-code</label>
+	<label style='display:block;text-align:left;'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>Manual</label>
 	<div><input type='button' value='Open my Wallets' onclick='DOT.presta_start(this)'></div>
     </div>
 
