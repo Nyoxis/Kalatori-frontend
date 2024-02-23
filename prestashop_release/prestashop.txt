@@ -24,7 +24,7 @@ https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkado
 https://raw.githubusercontent.com/polkadot-js/build-bundle/master/bundle-polkadot-util.js            | views/js/*
 
 ../../common/img/Alzymologist_.png | views/img/*
-../../common/img/polkadot.png      | views/img/*
+../../common/img/polkadot.webp     | views/img/*
 ../../common/img/ajaxm.gif         | views/img/*
 
 controllers/front/ajax.php         | controllers/front/*

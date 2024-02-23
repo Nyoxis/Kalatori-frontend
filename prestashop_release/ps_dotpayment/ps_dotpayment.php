@@ -257,7 +257,7 @@ PS_OS_WS_PAYMENT = 11
 
         $newOption = new PaymentOption();
         $newOption ->setModuleName($this->name)
-                ->setLogo(_MODULE_DIR_ . '/ps_dotpayment/views/img/polkadot.png')
+                ->setLogo(_MODULE_DIR_ . '/ps_dotpayment/views/img/polkadot.webp')
                 ->setCallToActionText($this->trans('Pay by DOT', [], 'Modules.Dotpayment.Shop'))
                 ->setAction( $this->context->link->getModuleLink($this->name, 'validation', [], true) )
                 ->setAdditionalInformation($this->fetch('module:ps_dotpayment/views/templates/front/dotpay.tpl'))
