@@ -20,5 +20,5 @@ jobs:
       - name: Run make_zip script file
         run: ./make_zip.php $ZIP
       - name: release
-        run: gh release create $ --generate-notes
+        run: gh release create $TAG --generate-notes
 
