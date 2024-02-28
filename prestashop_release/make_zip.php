@@ -6,7 +6,7 @@ $FROM="./ps_dotpayment";
 $s=file_get_contents("./prestashop.txt");
 
 $TO="/tmp/UPUPO";
-$ZIP=$_SERVER['PWD']."/$argv[1]";
+$ZIP=$_SERVER['PWD']."/ps_dotpayment84.zip";
 
 exec("rm -r \"".$TO."\"");
 
