@@ -8,5 +8,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-      - name: Print PHP version
-        run: echo ${{ steps.setup-php.outputs.php-version }}
+      - name: Run make_zip script file
+        run: ./pestashop_release/make_zip.php
+      - name: Check if there is outputed file
+        run: test -f ./pestashop_release/ps_dotpayment_2024-02-28*.zip && echo "new zip exists."
