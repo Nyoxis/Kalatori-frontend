@@ -8,6 +8,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+      - name: Check out repository code
+        uses: actions/checkout@v4
       - name: Run make_zip script file
         run: ./prestashop_release/make_zip.php
       - name: Check if there is outputed file
