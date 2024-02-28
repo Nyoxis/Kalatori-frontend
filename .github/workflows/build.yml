@@ -13,6 +13,6 @@ jobs:
       - name: Run make_zip script file
         run: cd ./prestashop_release && ./make_zip.php
       - name: Check if there is outputed file
-        run: ZIP=$(ls -t ps_dotpayment*.zip | head -1)
-      - run: echo "$ZIP"
+        run: ZIP=$(ls -c ps_dotpayment*.zip | head -1)
+      - run: echo $ZIP
 
