@@ -16,7 +16,7 @@ jobs:
       - name: Get filename
         run: echo "ZIP=ps_dotpayment_$(date +'%Y-%m-%d')_$(git rev-parse --short "$GITHUB_SHA").zip" >> $GITHUB_ENV
       - name: Run make_zip script file
-        run: ./make_zip.php $ZIP
+        run: cd ./ && ./make_zip.php $ZIP
       - name: check if there is files
         run: ls -c ps_dotpayment*.zip | head -1
 
