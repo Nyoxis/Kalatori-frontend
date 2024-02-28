@@ -1,7 +1,7 @@
 name: Build opencart3 and prestashop modules
 on: workflow_dispatch
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - name: Setup PHP
@@ -10,7 +10,11 @@ jobs:
           php-version: '8.3'
       - name: Check out repository code
         uses: actions/checkout@v4
+  build:
+    needs: setup
+    runs-on: ununtu-lates
+    steps:
       - name: Run make_zip script file
         run: cd ./prestashop_release && ./make_zip.php
       - name: Check if there is outputed file
-        run: test -f ./pestashop_release/ps_dotpayment_2024-02-28*.zip && echo "new zip exists."
+        run: test -f ps_dotpayment_2024-02-28*.zip && echo "new zip exists."
