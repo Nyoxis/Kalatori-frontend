@@ -1,0 +1,19 @@
+name: Build opencart3 and prestashop modules
+on:
+  push:
+    branches:
+      - main
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+  print-php-version:
+    runs-on: ubuntu@latest
+    needs: setup
+    steps:
+      - name: Print PHP version
+        run: echo ${{ steps.setup-php.outputs.php-version }}
