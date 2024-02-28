@@ -11,6 +11,6 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Run make_zip script file
-        run: cd ./prestashop_release && ./make_zip.php
+        run: cd ./prestashop_release && . make_zip.php
       - name: Check if there is outputed file
         run: echo "$ZIP"
