@@ -3,6 +3,8 @@ on: workflow_dispatch
 jobs:
   build-prestashop-addon:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     defaults:
       run:
         working-directory: ./prestashop_release
@@ -20,5 +22,5 @@ jobs:
       - name: Run make_zip script file
         run: ./make_zip.php $ZIP
       - name: release
-        run: gh release create $TAG --generate-notes
+        run: gh release create $TAG "$ZIP" --generate-notes
 
