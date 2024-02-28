@@ -1,7 +1,7 @@
 name: Build opencart3 and prestashop modules
 on: workflow_dispatch
 jobs:
-  setup:
+  build-prestashop-addon:
     runs-on: ubuntu-latest
     steps:
       - name: Setup PHP
@@ -18,6 +18,6 @@ jobs:
              -type f
              -name "ps_dotpayment*.zip" |
              xargs -r -0 ls -1 -t |
-             head -1
+             head -1)
       - run: echo "$ZIP"
 
