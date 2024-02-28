@@ -13,10 +13,12 @@ jobs:
           php-version: '8.3'
       - name: Check out repository code
         uses: actions/checkout@v4
+      - name: Get Tag
+        run: echo "TAG=$(date +'%Y-%m-%d')_$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
       - name: Get filename
-        run: echo "ZIP=ps_dotpayment_$(date +'%Y-%m-%d')_$(git rev-parse --short "$GITHUB_SHA").zip" >> $GITHUB_ENV
+        run: echo "ZIP=ps_dotpayment_$TAG.zip" >> $GITHUB_ENV
       - name: Run make_zip script file
         run: ./make_zip.php $ZIP
-      - name: check if there is files
-        run: ls -c ps_dotpayment*.zip | head -1
+      - name: release
+        run: gh release create $ --generate-notes
 
