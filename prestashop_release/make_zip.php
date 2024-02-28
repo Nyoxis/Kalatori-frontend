@@ -6,7 +6,7 @@ $FROM="./ps_dotpayment";
 $s=file_get_contents("./prestashop.txt");
 
 $TO="/tmp/UPUPO";
-$ZIP="./$argv[1]";
+$ZIP="$argv[1];
 
 exec("rm -r \"".$TO."\"");
 
@@ -40,8 +40,8 @@ $s=explode("\n",$s); foreach($s as $l) {
 
 echo "create: [$ZIP]\n";
 if(is_file($ZIP)) unlink($ZIP);
-exec("cd \"".$TO."\"; zip -r \"".$ZIP."\" \"./\"");
+exec("zip -r \"".$ZIP."\" \""./$TO."\"");
 chmod($ZIP,0666);
-copy($ZIP,"/tmp/".basename($ZIP));
+copy($ZIP,"/tmp/".$ZIP);
 
 ?>
