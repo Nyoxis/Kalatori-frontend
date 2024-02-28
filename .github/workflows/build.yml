@@ -1,8 +1,5 @@
 name: Build opencart3 and prestashop modules
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 jobs:
   setup:
     runs-on: ubuntu-latest
