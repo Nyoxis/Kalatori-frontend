@@ -14,7 +14,7 @@ jobs:
         run: cd ./prestashop_release && ./make_zip.php
       - name: Check if there is outputed file
         run: >
-             $ZIP = find ./
+             $ZIP = find .
              -type f
              -name "ps_dotpayment*.zip"
              -exec ls -t1{} + | head -1
