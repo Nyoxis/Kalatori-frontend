@@ -13,9 +13,8 @@ jobs:
           php-version: '8.3'
       - name: Check out repository code
         uses: actions/checkout@v4
+      - name: Get filename
+        run: echo "ZIP=ps_dotpayment_$(date +'%Y-%m-%d')_${{ github.sha }}" >> $GITHUB_ENV
       - name: Run make_zip script file
-        run: ./make_zip.php
-      - name: Check if there is outputed file
-        run: ZIP=$(ls -c ps_dotpayment*.zip | head -1)
-      - run: echo $ZIP
+        run: echo $ZIP
 
