@@ -40,7 +40,7 @@ $s=explode("\n",$s); foreach($s as $l) {
 
 echo "create: [$ZIP]\n";
 if(is_file($ZIP)) unlink($ZIP);
-exec("cd \"".$TO."\"; zip -r \"".$_SERVER['PWD']."/".$ZIP."\" \"./\"");
+exec("cd \"".$TO."\"; zip -r \"".$_SERVER['PWD']."\"/\"".$ZIP."\" \"./\"");
 exec("cd \"".$_SERVER['PWD']."/\"");
 chmod($ZIP,0666);
 copy($ZIP,"/tmp/".$ZIP);
