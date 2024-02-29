@@ -40,8 +40,8 @@ $s=explode("\n",$s); foreach($s as $l) {
 
 echo "create: [$ZIP]\n";
 if(is_file($ZIP)) unlink($ZIP);
-exec("zip -r \"".$argv[1].$ZIP."\" \"".$TO."\"");
-chmod($argv[1].$ZIP,0666);
-copy($argv[1].$ZIP,"/tmp/".$ZIP);
+exec("cd \"".$TO."\"; zip -r \"".$argv[1].$ZIP."\" \"".$TO."\"; cd");
+chmod($ZIP,0666);
+copy($ZIP,"/tmp/".$ZIP);
 
 ?>
