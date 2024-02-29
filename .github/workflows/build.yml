@@ -20,7 +20,7 @@ jobs:
       - name: Get filename
         run: echo "ZIP=ps_dotpayment_$TAG.zip" >> $GITHUB_ENV
       - name: Run make_zip script file
-        run: ./make_zip.php $ZIP
+        run: ./make_zip.php
       - name: release
         run: gh release create $TAG $ZIP --generate-notes
 
