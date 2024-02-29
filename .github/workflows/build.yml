@@ -5,9 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    defaults:
-      run:
-        working-directory: ./prestashop_release
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -20,7 +17,7 @@ jobs:
       - name: Get filename
         run: echo "ZIP=ps_dotpayment_$TAG.zip" >> $GITHUB_ENV
       - name: Run make_zip script file
-        run: ./make_zip.php
+        run: .prestashop_release/make_zip.php $ZIP
       - name: release
         run: gh release create $TAG $ZIP --generate-notes
 
