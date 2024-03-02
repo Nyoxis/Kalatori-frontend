@@ -2,8 +2,19 @@ DOT={
 
 debug: 1, // ТОЛЬКО ДЛЯ ОТЛАДКИ! ПОТОМ УБРАТЬ!
 
+
 daemon: { // тут будет инфо, пришедшая от демона
     currency_name: 'DOT',
+},
+
+chain: { // тут будет инфо, запрошенное от блокчейна
+    ss58Format: 0,
+    amountAdd: 1.02*10000000000,
+    tokenDecimals: 10,
+    mul: 10000000000,
+    tokenSymbol: "DOT",
+    existentialDeposit: 1*10000000000,
+    partialFee: 0.02*10000000000,
 },
 
 cx: {}, // а тут инфо от магазина
@@ -23,7 +34,7 @@ opencart3_run: function(path) {
 //    DOT.progress.stop();
 //    DOT.progress.run(0, function(){ DOT.Talert('Error: timeout'); setTimeout(DOT.progress.stop,800); });
     Array.from(DOT.dom('form-polkadot').elements).forEach((e) => { const { name,value } = e; DOT.cx[name]=value; });
-    DOT.daemon_info();
+    // DOT.daemon_info();
 },
 
 opencart3_submit: function() {
@@ -39,6 +50,15 @@ opencart3_submit: function() {
 
 // ==========================================
 
+presta_start: function(e) {
+    e=e.closest("DIV.payment-options");
+    if(!e) return alert('design error 01');
+    e=e.querySelector("INPUT[name='payment-option']"); // .click(); // [id*='payment-option-']
+    if(!e) return alert('design error 02');
+    // e.style.border='10px solid red';
+    e.click();
+},
+
 presta_init: function(cx) {
     // запускается во время общей загрузки страницы, но выбор плагина DOT еще не сделан!
     DOT.store = 'presta';
@@ -47,23 +67,22 @@ presta_init: function(cx) {
 	// cx.ajax_url=cx.wpath.replace(/\/views$/g,'/')+'ajax.php';
     }
     DOT.cx=cx;
-    // cx.total cx.id cx.shop_id cx.products
     DOT.path = cx.wpath;
     DOT.mainjs = cx.wpath+'/js/';
     DOT.ajaxm = cx.wpath+'/img/ajaxm.gif';
 
     // определяем процедуру включения основной платежной кнопки
-    DOT.button_on=function(){
-        document.querySelectorAll("BUTTON[type='submit'][disabled]").forEach(function(e){
+    DOT.button_on=function() {
+        document.querySelectorAll("BUTTON[type='submit'].disabled").forEach(function(e){
 	    e.classList.remove("disabled");
 	    e.disabled=null;
-	    e.style.border='1px dashed red';
+	    // e.style.border='1px dashed red';
 	});
     };
 
     // перехатываем только нашу FORM.onsubmit
     var e=document.querySelector('FORM[action*="'+cx.module_name+'"]');
-    if(!e) return DOT.alert("DOT plugin: Design error!");
+    if(!e) return DOT.alert("Prestashop DOT plugin: Design error!");
     e.onsubmit=function(x) {
 	DOT.button_on();
 	DOT.alert('clear');
@@ -77,6 +96,7 @@ presta_init: function(cx) {
 	return DOT.all_submit();
     };
 
+/*
     // debug option
     if(DOT.debug) { // да блять согласен - поставить checkbox (ТОЛЬКО ДЛЯ ОТЛАДКИ!!!)
       document.querySelectorAll("INPUT[type='checkbox'][name*='conditions_to_approve']").forEach(function(e){
@@ -84,6 +104,7 @@ presta_init: function(cx) {
         e.setAttribute('checked',true);
       });
     }
+*/
 
     // 1. навешиваем на каждый выбор платежной опции запоминание этой опции
     //    с функцией старта наших процедур, если выбран наш плагин
@@ -93,20 +114,28 @@ presta_init: function(cx) {
             if(x.tagName!='DIV'||x.id.indexOf('-container')<0) x=x.closest('DIV[id^="payment-option-"]'); if(!x) return;
             DOT.f_save('pay_select',x.id);
 	    // а не наш ли это был выбран плагин?
-	    if(x.querySelectorAll("IMG[src*='polkadot.png']").length) { // да, наш!
-		DOT.daemon_info(); // узнать информацию демона
-		DOT.init(); // загрузить громоздкие скрипты polkadot.js и начать искать кошельки
+	    if(x.querySelectorAll("IMG[src*='polkadot.webp']").length) { // да, наш!
+		DOT.init();
 	    }
         };
     });
 
     // 2. смотрим, какую платежную опцию выбирали в этом магазине прежде, делаем автовыбор
-    var ps = ''+DOT.f_read("pay_select");
+    var ps = DOT.f_read("pay_select");
+    if(!ps) ps=''; else ps=''+ps;
     var p=document.getElementById(ps);
     if(p) { // если такая опция была, то сразу кликнуть нужный способ оплаты
-	// if(p.focus) p.focus(); if(p.click) p.click();
 	p=p.querySelector("INPUT#"+ps.replace(/\-container/g,''));
 	if(p.focus) p.focus(); if(p.click) p.click();
+    } else { // если опции не нашлось на странице
+	// то какой-то вообще элемент выбран?
+      document.querySelectorAll('DIV[id^="payment-option-"]').forEach(function(q){
+        if(q.id.indexOf('-container')<0) return;
+	if(q.querySelectorAll("IMG[src*='polkadot.webp']").length) { // если это наш, кликнуть
+	    var inp = q.querySelector("INPUT[name='payment-option'");
+	    if(inp && inp.checked) setTimeout(function(e){ q.click(); },100); // и если он выбран
+	}
+      });
     }
 },
 
@@ -128,21 +157,27 @@ presta_init: function(cx) {
     'alert': function(s){
 	var w=DOT.dom('dotpay_console');
 	if(!w) alert('no w: '+s);
-	if(s=='clear') w.innerHTML='';
-	else w.innerHTML+=s+'<br>';
+	if(s=='clear') { w.innerHTML=''; w.style.display='none'; }
+	else { w.innerHTML+=s+'<br>';  w.style.display='block'; }
     },
 
     Ealert: function(s){
-	DOT.Talert(s);
+	DOT.Talert(s,1);
     },
 
-    Talert: function(s){
+    Talert: function(s,deb) {
 	console.log(s);
-	var w=DOT.dom('dotpay_console_test');
-	if(!w) { DOT.alert("<div class='alert Xalert-danger' id='dotpay_console_test'></div>"); w=DOT.dom('dotpay_console_test'); }
-	if(!w) return alert('Dot Payment error: '+s );
+	if(!deb && !DOT.debug) return;
 
-	if(s=='clear') w.innerHTML=''; else w.innerHTML+=s+'<br>';
+	var w=DOT.dom('dotpay_console_test');
+	if(!w) {
+	    if(s=='clear') return; // если не было, то ли не создавать
+	    DOT.alert("<div class='alert Xalert-danger' id='dotpay_console_test'></div>");
+	    w=DOT.dom('dotpay_console_test');
+	    if(!w) return alert('Dotpayment error: '+s );
+	}
+	if(s=='clear') w.innerHTML='';
+	else if(deb || DOT.debug) w.innerHTML+=s+'<br>';
 	w.style.display=(w.innerHTML==''?'none':'block');
     },
 
@@ -151,34 +186,82 @@ presta_init: function(cx) {
     f_del: function(k){ try { return window.localStorage.removeItem(k); } catch(e) { return ''; }},
 
 // ============== presta ==============
-    cx: {
-	// DOT.cx.ajax_url
-	// order_id: DOT.cx.id, price: DOT.cx.total
-    },
+    cx: {},
 
+// daemon_info: function() { return; },
 
-daemon_info: function() {
-    if(!DOT.total()) return;
-    if(!DOT.cx.ajax_url) return alert('DOT plugin error 10802: empty cx.ajax_url');
-    const data = JSON.stringify({ order_id: DOT.cx.id, price: DOT.cx.total });
-
+daemon_get_info: async function() {
+    // if(!DOT.total()) return;
+    if(!DOT.health_url && !DOT.cx.ajax_url) return alert('DOT plugin error 10802: empty cx.ajax_url');
+    const data = JSON.stringify({ order_id: 0, price: 0 });
     DOT.AJAX(
-	DOT.cx.ajax_url,
+	(DOT.health_url?DOT.health_url:DOT.cx.ajax_url),
 	{
 	    async: false,
-	    callback: function(s) {
-		var json=DOT.ajax_process_errors(s); if(!json) return;
-		for(var n in json) {
-		    if(n.substring(0,7)=='daemon_') { DOT.daemon[n.substring(7)]=json[n]; }
+	    callback: async function(s) {
+		// var json=DOT.ajax_process_errors(s); if(!json) return;
+		// for(var n in json) { if(n.substring(0,7)=='daemon_') { DOT.daemon[n.substring(7)]=json[n]; } }
+
+		try { var json=JSON.parse(s); } catch(e) {
+		    DOT.Ealert("Json error: ["+DOT.h(s0)+"]");
+		    return false;
 		}
-		DOT.amount=DOT.cx.total * DOT.daemon.mul;
-		DOT.amount_human=Math.floor(DOT.amount/DOT.daemon.mul*10000)/10000+' '+DOT.daemon.currency_name;
+
+		if(json.daemon_wss) DOT.daemon.wss=json.daemon_wss;
+		else if(json.wss) DOT.daemon.wss=json.wss;
+		else {
+		    alert("Error connect to daemon");
+		    DOT.Ealert("Error connect to daemon");
+		    return false;
+		}
+		if(json.daemon_mul) DOT.daemon.mul=json.daemon_mul;
+		else if(json.mul) DOT.daemon.mul=json.mul;
+
+		    // пытаемся получить
+		    await DOT.connect();
+		    const cp = await DOT.api.rpc.system.properties();
+		    // ss58Format
+		    if(cp.ss58Format || cp.ss58Format===0) DOT.chain.ss58Format=cp.ss58Format;
+		    // mul
+		    if(cp.tokenDecimals) {
+			var x=cp.tokenDecimals.toHuman();
+			if(x && x[0]) DOT.chain.tokenDecimals=parseInt(x[0]);
+			if(DOT.chain.tokenDecimals) DOT.chain.mul=Math.pow(10, DOT.chain.tokenDecimals);
+		    } if(!DOT.chain.mul) DOT.chain.mul=DOT.daemon.mul;
+		    // имя блокчейна "DOT"
+		    if(cp.tokenSymbol) {
+			var x=cp.tokenSymbol.toHuman();
+			if(x && x[0]) DOT.chain.tokenSymbol = x[0];
+		    }
+		    // цена транзакции
+		    const existentialDeposit = await DOT.api.consts.balances.existentialDeposit;
+		    DOT.chain.existentialDeposit = parseInt(existentialDeposit);
+		    if(!DOT.chain.existentialDeposit) DOT.chain.existentialDeposit=1*DOT.chain.mul;
+		    // цена транзакции
+		    const addr = "0x80723effd95bfea4c175a1ceed58e4b4b6bd2609a709e22d8d7a415ce263863f";
+		    const { partialFee } = await DOT.api.tx.balances.transferKeepAlive(addr, 30*DOT.chain.mul).paymentInfo(addr);
+		    DOT.chain.partialFee = parseInt(partialFee);
+		    if(!DOT.chain.partialFee) DOT.chain.partialFee=0.02*DOT.chain.mul;
+		    // на сколько должна превышать сумма
+		    DOT.chain.amountAdd = DOT.chain.partialFee + DOT.chain.existentialDeposit;
+
+		DOT.amount=DOT.cx.total * DOT.chain.mul;
+		DOT.amount_human=Math.floor(DOT.amount/DOT.chain.mul*10000)/10000+' '+DOT.chain.tokenSymbol; // DOT.daemon.currency_name;
+
+		DOT.dom('dotpay_info').innerHTML=
+	        "Transferring "+DOT.indot( DOT.cx.total*DOT.chain.mul )
+		+" would require approximately "+DOT.indot( DOT.chain.partialFee )
+		+" on top of that to cover transaction fees."
+		//    "Amount: "+DOT.indot( DOT.cx.total*DOT.chain.mul + DOT.chain.partialFee)
+		//    +"<br>Covers price of kit(s), transaction fee and deposit in your Polkadot account"
+		+"<br>&nbsp;";
 	    }
 	},
 	data
     );
 },
 
+indot: function(x,planks) { return (Math.floor( parseInt(x)/DOT.chain.mul*10000 ) /10000) + " "+DOT.chain.tokenSymbol+(planks?" ("+x+" planks)":''); },
 
 ajax_process_errors: function(s0) {
 
@@ -191,23 +274,23 @@ ajax_process_errors: function(s0) {
 	    }
 
 	    try { var json=JSON.parse(s); } catch(e) {
-		DOT.alert("Json error: ["+DOT.h(s0)+"]");
+		DOT.Ealert("Json error: ["+DOT.h(s0)+"]");
 		return false;
 	    }
 
 	    if (json.error) { alert('error: '+JSON.stringify(json) );
-                if(json.error.warning) DOT.alert('warning: '+json.error.warning);
+                if(json.error.warning) DOT.Ealert('warning: '+json.error.warning);
 
                 if(typeof(json['error'])=='object') {
                     for (i in json.error) DOT.Ealert('error: '+i+' = '+json.error[i]);
                 } else {
-		    // alert('error: '+json.error +(json.error_message ? ' '+json.error_message : '') );
                     DOT.Ealert('error: '+json.error +(json.error_message ? ' '+json.error_message : '') );
                 }
 		return false;
             }
 
             if( json.redirect ) { window.location = json.redirect; return false; }
+	    if( json.daemon_result=='Paid' && DOT.onpaid ) DOT.onpaid(json);
 	    return json;
 },
 
@@ -219,11 +302,15 @@ total: function() {
     return total;
 },
 
-all_submit: function() {
+all_submit: function(y) {
+    if(!y) DOT.stoploopsubmit=0;
+    else if(DOT.stoploopsubmit) return;
+
     if(!DOT.total()) return;
-    // if(cx) DOT.cx=cx; else 
+    // if(cx) DOT.cx=cx; else
     var cx=DOT.cx;
     DOT.alert('clear');
+    DOT.Talert('clear');
     DOT.button_off();
 
     if(!cx.id && cx.order_id) cx.id=DOT.cx.id=cx.order_id;
@@ -232,33 +319,27 @@ all_submit: function() {
     if(!cx.ajax_url) return alert('DOT plugin error 0802: empty cx.ajax_url');
 
     var data = JSON.stringify({ order_id: cx.id, price: cx.total });
-    DOT.AJAX(
+
+    // можно указать свой альтернативный AJAX для особых уродцев типа WooCommerce
+    DOT[( DOT.AJAX_ALTERNATIVE ? 'AJAX_ALTERNATIVE' : 'AJAX' )](
 	cx.ajax_url,
 	async function(s) {
 	    var json=DOT.ajax_process_errors(s); if(!json) return DOT.button_on();
 
             if( json.daemon_result == 'Waiting' && json.daemon_pay_account && 1*json.price
 	    ) {
-		// if(json.daemon_wss) DOT.wss = json.daemon_wss.replace(/\:\d+$/g,'');
-		// if(json.daemon_mul) DOT.daemon.mul = 1*json.daemon_mul;
                 json.my_account = cx.acc;
 		json.pay_account = json.daemon_pay_account;
-		if(!DOT.accounts || !DOT.accounts.length ) {
-		    DOT.alert("You have no wallets extentions. Please sent transaction manually to address: "+json.pay_account);
-		    DOT.button_on();
-		} else {
 		    if(DOT.paidflag) {
-		        DOT.Talert('paidflag error!');
-		        DOT.Talert('cx: '+JSON.stringify(cx));
-		        DOT.Talert('json: '+JSON.stringify(json));
+		        DOT.Talert('Ready! Waiting for daemon...');
+			setTimeout(function(x){ DOT.all_submit(1); },800);
 		        return;
 		    }
 		    DOT.pay(json);
-		}
 	    } else {
 		var s='';
 		for(var i in json) s+=i+' = ['+json[i]+"]\n";
-		DOT.alert('ERROR OPT:\n\n '+s);
+		DOT.Ealert('ERROR OPT:\n\n '+s);
 		DOT.button_on();
 	    }
 	    // =================
@@ -316,7 +397,7 @@ progress: {
 		+"</div>";
     },
     stop: function() {
-	clearInterval(DOT.progress.id);
+	clearInterval(DOT.progress.id); DOT.progress.id=false;
 	var q=DOT.dom('dotpay_progress'); if(q) document.body.removeChild(q);
     },
 },
@@ -333,13 +414,12 @@ AJAX: function(url,opt,s) {
       if(this.readyState==4) {
         if(this.status==200 && this.responseText!=null) {
             if(this.callback) this.callback(this.responseText,url,s);
-            // else eval(this.responseText);
         } else if(this.status==500) {
             if(this.onerror) this.onerror(this.responseText,url,s);
             else if(opt.callback) opt.callback(false,url,s);
         }
       }
-//     } catch(e){ DOT.alert('Error Ajax: '+DOT.h(this.responseText)); }
+//     } catch(e){ DOT.Ealert('Error Ajax: '+DOT.h(this.responseText)); }
     };
 
     for(var i in opt) xhr[i]=opt[i];
@@ -366,21 +446,26 @@ AJAX: function(url,opt,s) {
 
 
     payWithPolkadot: async function(json,SENDER, price, destination, wss) {
-	var con = await DOT.connect();
-	if(!con) return false;
+	DOT.Talert('clear');
+	await DOT.connect();
 
         var e = await DOT.api.query.system.account( destination );
 	DOT.Talert('Start balance = '+ e.data.free );
 
 	const injector = await polkadotExtensionDapp.web3FromAddress(SENDER);
 
-	var transfer = 'transfer';
-	if(!DOT.api.tx.balances[transfer]) for(var l in DOT.api.tx.balances) { if(l.indexOf('transferAllo')==0) transfer=l; }
+	// var transfer = 'transfer';
+	var transfer = 'transferKeepAlive';
+	if(!DOT.api.tx.balances[transfer]) return alert("Chain error: not found api.tx.balances."+transfer);
+
+	// if(!DOT.api.tx.balances[transfer]) transfer='transferKeepAlive';
+	// if(!DOT.api.tx.balances[transfer]) for(var l in DOT.api.tx.balances) { if(l.indexOf('transferAllo')==0) transfer=l; }
 
 	const transferExtrinsic = DOT.api.tx.balances[transfer](destination, price);
 	transferExtrinsic.signAndSend(SENDER, { signer: injector.signer }, ({ status }) => {
             if(!DOT.progress.id) DOT.progress.run(0,
 		    function(){
+			// alert('progress stop');
 			DOT.alert('Error: timeout');
 			setTimeout(DOT.progress.stop,800);
 		    }); // start progressbar
@@ -390,15 +475,15 @@ AJAX: function(url,opt,s) {
 	        DOT.api.query.system.account( destination ).then((e) => { DOT.Talert('balance isInBlock = '+ e.data.free ); });
 	    } else if (status.isFinalized || status.type == 'Finalized') {
 		DOT.Talert('status:Finalized');
+		DOT.progress.stop();
 		return DOT.payment_done( destination );
-
 	    } else {
 		DOT.Talert(`status: ${status.type}`);
 	    }
 	}).catch((error) => {
             DOT.progress.stop(); // stop progressbar
-	    DOT.Talert('transaction failed'+error);
-	    DOT.Ealert(error);
+	    DOT.Talert('transaction failed: '+error);
+	    // DOT.Ealert(error);
 	    DOT.disconnect();
 	    DOT.button_on();
         });
@@ -408,9 +493,18 @@ AJAX: function(url,opt,s) {
 
     payment_done: async function( destination ) {
 
-	DOT.Talert('payment_done!');
+	DOT.Talert('payment_done');
 	var e = await DOT.api.query.system.account( destination );
-	DOT.Talert('Finish balance = '+ e.data.free );
+	DOT.Talert('Ending balance = '+ e.data.free );
+
+	if(1*e.data.free == 0) {
+	    DOT.progress.stop();
+	    DOT.button_on();
+	    DOT.Talert('Transfer error');
+	    alert('Transfer error');
+	    return;
+	}
+
 	// DOT.api.query.system.account( destination ).then((e) => { DOT.Talert('balance Finalized = '+ e.data.free ); });
 
 	// типа пришло
@@ -419,43 +513,103 @@ AJAX: function(url,opt,s) {
 	    var e = await DOT.api.query.system.account( destination );
 	    DOT.Talert('...balance now: '+ e.data.free );
 	    if(++k > 10) { clearInterval(sin); DOT.Talert('...stop'); }
-	},1000);
-		// return;
+	},2000);
+
+        if(!DOT.progress.id) DOT.progress.run(0,
+		    function(){
+			DOT.stoploopsubmit=1;
+			clearInterval(sin); DOT.Talert('...stop');
+			DOT.alert('Error: timeout');
+			setTimeout(DOT.progress.stop,800);
+			alert('daemon error');
+		    }); // start progressbar
 
 	// DOT.progress.stop();
 	// DOT.disconnect();
-	DOT.Talert('Do submit...');
+	DOT.Talert('Ping daemon...');
 	DOT.paidflag = 1;
-	DOT.all_submit();
+	DOT.all_submit(1);
     },
 
-
     pay: async function(json) {
-	DOT.alert("Pay account: "+json.pay_account+"<br>Total: "+DOT.amount_human+"<br>Order id: "+json.order_id);
+
+	if(json.my_account == 'QR') {
+
+	    DOT.dom('dotpay_info').innerHTML=
+	    "Transfer <b>"+DOT.indot( DOT.amount )+"</b> (will require approximately "+DOT.indot( DOT.chain.partialFee )+" on top of that to cover Polkadot transaction fees) to the following address:"
+		+"<div style='padding:10px 0 10px 0;font-weight:bold;font-size:1.1em'><a onclick='DOT.cpbuf(this.innerHTML); return false;'>"+DOT.id2west(json.pay_account)+"</a></div>"
+		// +"<div style='font-size:8px;'>"+json.pay_account+"</div>"
+		+"<div style='padding-bottom: 10px;'>Currently received: <span class='my_dot_balance'></span></div>"
+		// +"<br>Order id: "+json.order_id
+		+"When sent, please press the payment button once again to finalize your purchase."
+		+"<br>&nbsp;";
+
+	    var gbal = function() {
+		document.querySelectorAll('.my_dot_balance').forEach((e)=>{e.innerHTML="<img src='"+DOT.ajaxm+"'>"});
+		setTimeout(async function(){
+		    await DOT.connect();
+		    var x = await DOT.api.query.system.account( json.pay_account );
+		    x=parseInt(x.data.free);
+		    document.querySelectorAll('.my_dot_balance').forEach((e)=>{e.innerHTML=DOT.indot(x)});
+		    if(x>= DOT.cx.total*DOT.chain.mul) {
+			setTimeout(DOT.all_submit,1000);
+			if(DOT.rebalance_interval) clearInterval(DOT.rebalance_interval);
+		    }
+		},500);
+	    };
+	    gbal();
+	    if(DOT.rebalance_interval) clearInterval(DOT.rebalance_interval);
+	    DOT.rebalance_interval=setInterval(gbal,5000);
+
+	    DOT.button_on();
+	    return;
+	}
+
+	//DOT.alert("Transfer <b>"+DOT.indot( 1*DOT.amount, 'planks' )+"</b> to:"
+	//	+"<div style='font-weight:bold;'><a onclick='DOT.cpbuf(this.innerHTML); return false;'>"+DOT.id2west(json.pay_account)+"</a></div>"
+	//	+"<div style='font-size:8px;'>"+json.pay_account+"</div>"
+	//	+"<br>Order id: "+json.order_id);
+
+	DOT.dom('dotpay_info').innerHTML=
+	    "This will send "+DOT.indot( DOT.amount )+" to the shop's address "
+	    +DOT.id2west(json.pay_account)
+	    +", and consume approximately "+DOT.indot( DOT.chain.partialFee )
+	    +" on top of that to cover Polkadot transaction fees"
+	    +"<br>&nbsp;";
+
 	DOT.payWithPolkadot(json, json.my_account, DOT.amount, json.pay_account);
     },
 
     et: 0,
 
     init: async function() { // x = path
-
 	// load JS - первая необходимая часть для кошельков, остальное загрузим позже для ускорения
 	await DOT.LOADS_promice([
 	 DOT.mainjs+'bundle-polkadot-util.js',
 	 DOT.mainjs+'bundle-polkadot-util-crypto.js',
 	 DOT.mainjs+'bundle-polkadot-extension-dapp.js',
+
+         DOT.mainjs+'bundle-polkadot-types.js',
+         DOT.mainjs+'bundle-polkadot-api.js',
+	 DOT.mainjs+'bundle-polkadot-keyring.js', // west
+	 DOT.mainjs+'identicon.js'
 	],1);
+
+	DOT.daemon_get_info();
 
      try {
 	// connect Wallets
         var wallets=await polkadotExtensionDapp.web3Enable('dotpay');
 	DOT.wallets=wallets;
 
-	var r={'manual':[
-		"<label style='display:flex;text-align:left;' balanced='1'><input style='margin-right: 5px;' name='dot_addr' type='radio' value='QR'>QR-code</label>",
+	var r={'':[
+		"<label style='display:flex;text-align:left;' balanced='1'><input style='margin-right: 5px;' id='dot_payment_manual' name='dot_addr' type='radio' value='QR'>Manual</label>",
 	]};
+	var wal_length=1;
+
         if( !wallets.length ) {
-	    if(!DOT.et) DOT.alert("<b>Wallets not found</b>"
+
+	    if(!DOT.et) DOT.alert("<b>Wallet not found</b>"
 		    +"<br>You can use Wallet extention "
 		    +(this.navigator()=='firefox'
 			? "<a href='https://addons.mozilla.org/en-US/firefox/addon/polkadot-js-extension/'>polkadot{.js} for Firefox</a>"
@@ -465,10 +619,11 @@ AJAX: function(url,opt,s) {
 			  )
 		    )
 		    +" or <a href='https://www.subwallet.app/'>Subwallet</a>"
-		    +"<br>Also you can make DOT-payment manually using QR-code"
+		    +"<br>Also you can make DOT-payment manually"
 	    );
+
 	} else {
-	    var accounts = await polkadotExtensionDapp.web3Accounts({ss58Format:0});
+	    var accounts = await polkadotExtensionDapp.web3Accounts({ss58Format:DOT.chain.ss58Format}); // 0
 		// Kusama   == 2 CxDDSH8gS7jecsxaRL9Txf8H5kqesLXAEAEgp76Yz632J9M keyring.setSS58Format(2); console.log('Kusama', pair.address);
 		// Polkadot == 0 1NthTCKurNHLW52mMa6iA8Gz7UFYW5UnM3yTSpVdGu4Th7h keyring.setSS58Format(0); console.log('Polkadot', pair.address);
 	    DOT.accounts=accounts;
@@ -477,33 +632,37 @@ AJAX: function(url,opt,s) {
 		    var wal = l.meta.source.replace(/\-js$/,'');
 		    if(!r[wal]) r[wal]=[];
 		    r[wal].push("<label style='display:block;text-align:left;'>"
+		  +"<div class='identicon' style='display:inline-block; width:42px;height:42px;margin-right:8px;'></div>"
+		  +"&nbsp;<div style='display:inline-block'>"
 		     +"<input name='dot_addr' type='radio' value='"+DOT.h(l.address)+"'"
 		     +(deff == l.address ? ' checked' : '')
 		     +">&nbsp;&nbsp;<span style='font-weight:bold' title='"+DOT.h(l.address)+"'>"+DOT.h(l.meta.name)+"</span>"
-		     +"<div class='balance'>"+DOT.h(l.address)+"</div>"
-		    +"</label>");
+		     +"<div class='balance'>"
+			+"<img src='"+DOT.ajaxm+"'>&nbsp;<span style='font-size:8px;'>"+DOT.h(l.address)+"</span>"
+		      +"</div>"
+		  +"</div>"
+		  +"</label>");
+		  wal_length++;
 	    }
 	}
 
-        var op=''; for(var wal in r) {
+	if(wal_length != DOT.wal_length) { // менять страницу только если что-то изменилось
+	  DOT.wal_length = wal_length;
+          var op=''; for(var wal in r) {
 	    op += (wal==''? r[wal].join('') : "<div style='margin-left:10%;'>"+DOT.h(wal)+"</div>" + r[wal].join('') );
+	  }
+	  DOT.dom('WalletID').innerHTML=op; // +(k!=1?'': "<div>Loading wallets <img src='"+DOT.ajaxm+"'></div>");
+	  // Onchang -: save to LocalStorage
+	  DOT.dom('WalletID').querySelectorAll("INPUT").forEach(function(ee){ ee.onchange=DOT.save_addr; });
+	  DOT.dom('dotpay_wallet_finded').innerHTML=// "<br>Amount: "+DOT.amount_human+
+		(wallets.length
+		? "<br>found "+accounts.length+" accounts"+ (wallets.length > 1 ? " in "+wallets.length+" wallets":"")
+		:''
+	    );
+
+         if( !wallets.length ) { DOT.dom('dot_payment_manual').click(); }
+	 else DOT.identicon_init();
 	}
-	DOT.dom('WalletID').innerHTML=op; // +(k!=1?'': "<div>Loading wallets <img src='"+DOT.ajaxm+"'></div>");
-
-	// Onchang -: save to LocalStorage
-	DOT.dom('WalletID').querySelectorAll("INPUT").forEach(function(ee){ ee.onchange=DOT.save_addr; });
-	DOT.dom('dotpay_wallet_finded').innerHTML="<br>Amount: "+DOT.amount_human
-	    +"<br>found "+accounts.length+" accounts"+ (wallets.length > 1 ? " in "+wallets.length+" wallets":"");
-
-	// вот теперь подгрузим остальные скрипты
-	await DOT.LOADS_promice([
-	 DOT.mainjs+'bundle-polkadot-keyring.js', // west
-         DOT.mainjs+'bundle-polkadot-types.js',
-         DOT.mainjs+'bundle-polkadot-api.js',
-	 DOT.mainjs+'identicon.js'
-	],1);
-
-	DOT.identicon_init();
 
      } catch(ee) {
 	    if(!DOT.et) { DOT.et=0; }
@@ -530,18 +689,15 @@ AJAX: function(url,opt,s) {
 
     save_addr: function(x) { DOT.f_save('WalletID',this.value); },
 
-    getBalance: async function(west,e) { // return; // eeeeeeeeeeeeeeeeeeeeeeeeeeee
+    getBalance: async function(west,e) {
 	e.innerHTML="<img src='"+DOT.ajaxm+"'>";
-
-// alert('Daemon: '+JSON.stringify(DOT.daemon)+"\n\nDOT.amount="+ DOT.amount );
-
 	return DOT.api.query.system.account( DOT.west2id(west) ).then((l) => {
 	    var bal = 1* l.data.free;
-	    e.innerHTML=Math.floor(bal/DOT.daemon.mul*10000)/10000+' '+DOT.daemon.currency_name;
+	    e.innerHTML=Math.floor(bal/DOT.chain.mul*10000)/10000+' '+DOT.chain.tokenSymbol; // DOT.daemon.currency_name;
 	    var w=e.closest('LABEL');
 	    w.setAttribute('balanced',1);
 
-	    if(bal < DOT.amount) {
+	    if( bal < (DOT.cx.total*DOT.chain.mul + DOT.chain.amountAdd) ) {
 		w.style.opacity='0.5';
 		w.querySelector('INPUT').disabled=true;
 	    }
@@ -567,6 +723,9 @@ AJAX: function(url,opt,s) {
 	return polkadotUtil.u8aToHex(polkadotKeyring.decodeAddress(west));
     },
 
+    id2west: function(id){
+	return polkadotKeyring.encodeAddress(id,DOT.chain.ss58Format);
+    },
 
     disconnect: async function() {
 	if(!DOT.api) return;
@@ -577,8 +736,7 @@ AJAX: function(url,opt,s) {
     connect: async function() {
 	if(DOT.api) return DOT.api;
 	if(!DOT.daemon.wss) {
-	    console.log("Error: no wss");
-	    return false; // alert('no wss');
+	    return alert('no wss');
 	}
 	// соединяемся с блокчейном
 	var wss = (''+DOT.daemon.wss).replace(/\:\d+$/g,'');
@@ -587,17 +745,19 @@ AJAX: function(url,opt,s) {
     },
 
     identicon_init: async function() {
-	var con = await DOT.connect();
-	if(!con) return false;
-
+	await DOT.connect();
 	DOT.dom('WalletID').querySelectorAll('LABEL').forEach(function(p){
 	    //получить адрес
 	    var adr=p.querySelector('SPAN'); if(!adr) return; adr=adr.getAttribute('title'); // adr.innerHTML;
-	    var oh=p.offsetHeight; if(!oh) oh=42;
-	    oh+='px';
-	    p.innerHTML="<div style='display:inline-block; width:"+oh+";height:"+oh+";margin-right:8px;'>"
-		+identicon_render(adr,42)
-		+"</div>&nbsp;<div style='display:inline-block'>"+p.innerHTML+"</div>";
+	    // var oh=p.offsetHeight; if(!oh) oh=42;
+	    // oh+='px';
+	    var div=p.querySelector('.identicon');
+	    // div.style.width=oh;
+	    // div.style.height=oh;
+	    div.innerHTML=identicon_render(adr,42);
+//	    p.innerHTML="<div style='display:inline-block; width:"+oh+";height:"+oh+";margin-right:8px;'>"
+//		+identicon_render(adr,42)
+//		+"</div>&nbsp;<div style='display:inline-block'>"+p.innerHTML+"</div>";
 	    p.querySelector('INPUT').onchange=DOT.save_addr;
 	    DOT.getBalance(adr,p.querySelector('.balance'));
 	});
@@ -642,4 +802,16 @@ AJAX: function(url,opt,s) {
  LOADS_promice: function(file,sync) {
         return new Promise(function(resolve, reject) { DOT.LOADS(file,resolve,reject,sync); });
  },
+
+ cpbuf: function(e,message){ if(typeof(e)=='object') e=e.innerHTML;
+    var area = document.createElement('textarea');
+    document.body.appendChild(area);
+    area.value = e;
+    area.select();
+    document.execCommand('copy');
+    document.body.removeChild(area);
+    // if(message)
+    // alert('Copy: '+(DOT.h(e).replace(/\n/g,'<br>')) );
+ },
+
 };

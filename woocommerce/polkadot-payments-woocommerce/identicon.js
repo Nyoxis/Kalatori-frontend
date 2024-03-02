@@ -9,7 +9,7 @@ function identicon_init(e,size,css) { if(!e) e=document; if(!size) size=128;
     	    for(var c of p.classList) if(c.length==48 || c.startsWith('0x') || 1*c) { adr=c; break; }
 	}
 	if(adr==false) adr=p.innerHTML; // if no address in classList, take address in innerHTML
-	p.innerHTML="<div style='display:inline-block; width:"+p.offsetHeight+"px;height:"+p.offsetHeight+"px;"+(css?css:'')+"'>"
+	p.innerHTML="<div style='display:inline-block; width:"+p.offsetHeight+"px;height:"+p.offsetHeight+"px"+(css?css:'')+"'>"
 +identicon_render(adr,size)+"</div>&nbsp;"+p.innerHTML;
 	p.classList.add('identicon_done');
     });

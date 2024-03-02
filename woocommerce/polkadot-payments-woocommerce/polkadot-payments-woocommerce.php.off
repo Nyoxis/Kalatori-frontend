@@ -11,6 +11,7 @@
 // Не открываем напрямую
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+
 /*
  * Этот фильтр-хук позволяет зарегистрировать наш PHP-класс в качестве платёжного шлюза WooCommerce
  */
@@ -35,15 +36,53 @@ function polkadot_gateway_class() {
 	public function __construct() {
 
 	    $this->id = 'polkadot'; // ID платёжного шлюза
-	    $this->icon = 'https://assets.polkadot.network/brand/Polkadot_Logo/Horizontal/SVG/Transparent/Polkadot_Logo_Horizontal_Pink-White.svg'; // 'https://lleo.me/fon1.jpg'; // URL иконки, которая будет отображаться на странице оформления заказа рядом с этим методом оплаты
-	    // $this->has_fields = true; // если нужна собственная форма ввода полей карты
+	    $this->icon = 'https://lleo.me/fon1.jpg'; // URL иконки, которая будет отображаться на странице оформления заказа рядом с этим методом оплаты
+	    $this->has_fields = true; // если нужна собственная форма ввода полей карты
 	    $this->method_title = 'Polkadot payments';
 	    $this->method_description = 'Polkadot direct payments'; // будет отображаться в админке
-	    // платёжные плагины могут поддерживать подписки, сохранённые карты, возвраты, но начнём с простых платежей
-	    $this->supports = array( 'products' );
 
-	    // все поля настроек админки
+	    // платёжные плагины могут поддерживать подписки, сохранённые карты, возвраты
+	    // но в пределах этого урока начнём с простых платежей, хотя в виде ниже будет чуть подробнее и о другом
+	    $this->supports = array(
+		'products'
+	    );
+
+	    // тут хранятся все поля настроек
+	    $this->init_form_fields();
+
+	    // инициализируем настройки
+	    $this->init_settings();
+	    // название шлюза
+	    $this->title = $this->get_option( 'title' );
+	    // описание
+	    $this->description = $this->get_option( 'description' );
+	    // включен или выключен
+	    $this->enabled = $this->get_option( 'enabled' );
+	    // работает в тестовом режиме (sandbox) или нет
+	    $this->testmode = 'yes' === $this->get_option( 'testmode' );
+	    // и естественно отдельные ключи для тестового и рабочего режима шлюза
+	    $this->private_key = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
+	    $this->publishable_key = $this->testmode ? $this->get_option( 'test_publishable_key' ) : $this->get_option( 'publishable_key' );
+
+	    // Хук для сохранения всех настроек, как видите, можно еще создать собственный метод process_admin_options() и закастомить всё
+	    add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+
+	    // Если будет генерировать токен из данных карты, то по-любому нужно будет подключать какой-то JS
+	    add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
+
+	    // ну и хук тоже можете тут зарегистрировать
+	    // add_action( 'woocommerce_api_{webhook name}', array( $this, 'polkadot_webhook' ) );
+	}
+
+	/**
+	 * Админка wooCommerce: опции платёжного шлюза, тоже подробнее в 3-м шаге
+	 */
+	public function init_form_fields(){
+
+		// + die('init_form_fields()');
+
 	    $this->form_fields = array(
+
 		'enabled' => array(
 		    'title'       => 'On/Off',
 		    'label'       => 'Turn on Polkadot payments',
@@ -51,42 +90,60 @@ function polkadot_gateway_class() {
 		    'description' => '',
 		    'default'     => 'no'
 		),
-		'store_name' => array(
-		    'title'       => 'Store name',
-		    'description' => 'Enter your store name or leave blank',
-		    'default'     => '',
+
+		'title' => array(
+		    'title'       => 'Заголовок',
+		    'type'        => 'text',
+		    'description' => 'Это то, что пользователь увидит как название метода оплаты на странице оформления заказа.',
+		    'default'     => 'Polkadot direct payments',
+		    'desc_tip'    => true,
+		),
+
+
+/*
+		'workfield' => array(
+		    'title'       => 'workfield',
+		    'label'       => 'workfield',
+		    'type'        => 'textarea',
+		    'description' => 'Рабочее поле.',
+		    'default'     => 'wwwwwwwwwwwwwwwwwwwww',
+		    'desc_tip'    => true,
+		),
+*/
+
+		'description' => array(
+		    'title'       => 'Описание',
+		    'type'        => 'textarea',
+		    'description' => 'Описание этого метода оплаты, которое будет отображаться пользователю на странице оформления заказа.',
+		    'default'     => 'Оплатите при помощи карты легко и быстро.',
+		),
+
+		'testmode' => array(
+		    'title'       => 'Тестовый режим',
+		    'label'       => 'Включить тестовый режим',
+		    'type'        => 'checkbox',
+		    'description' => 'Хотите сначала протестировать с тестовыми ключами API?',
+		    'default'     => 'yes',
+		    'desc_tip'    => true,
+		),
+		'test_publishable_key' => array(
+		    'title'       => 'Тестовый публичный ключ',
 		    'type'        => 'text'
 		),
-		'daemon_url' => array(
-		    'title'       => 'Daemon url',
-		    'description' => 'Enter your daemon url like http://localhost:16726',
-		    'default'     => 'http://localhost:16726',
+		'test_private_key' => array(
+		    'title'       => 'Тестовый приватный ключ',
+		    'type'        => 'password',
+		),
+		'publishable_key' => array(
+		    'title'       => 'Публичный ключ',
 		    'type'        => 'text'
 		),
+		'private_key' => array(
+		    'title'       => 'Приватный ключ',
+		    'type'        => 'password'
+		)
 	    );
-
-	    // инициализируем настройки
-	    $this->init_settings();
-	    $this->enabled = $this->get_option( 'enabled' );
-	    $this->store_name = $this->get_option( 'store_name' );
-	    $this->daemon_url = $this->get_option( 'daemon_url' );
-
-	    // Хук для сохранения всех настроек, как видите, можно еще создать собственный метод process_admin_options() и закастомить всё
-	    add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
-
-	    // Если будет генерировать токен из данных карты, то по-любому нужно будет подключать какой-то JS
-	    // add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
-
-	    // ну и хук тоже можете тут зарегистрировать
-	    // add_action( 'woocommerce_api_{webhook name}', array( $this, 'polkadot_webhook' ) );
-
 	}
-
-
-//	public function payment_fields() {
-//	    return 'wwwwwwwwwwwwwwwwwww';
-//	}
-
 
 	/**
 	 * А этот метод пригодится, если захотите добавить форму ввода данных карты прямо на сайт
@@ -236,34 +293,71 @@ function override_woo_frontend_scripts() {
 
         }
 
+	/*
+	 * Валидация полей, подробнее в шаге 5
+	 */
+/*
+	public function validate_fields() {
+
+	    if( empty( $_POST[ 'billing_first_name' ]) ) {
+		wc_add_notice(  'Имя обязательно для заполнения!', 'error' );
+		return false;
+	    }
+	    return true;
+
+	}
+*/
+
+	/*
+	 * Тут мы будем обрабатывать платёж, подробнее в шаге 5
+	 */
+	public function process_payment( $order_id ) {
+
+	    die("{\"process_payment\":\"$order_id\"}");
+	// ...
+
+        }
+
+	/*
+	 * В том случае, если нам нужен хук, к которому будет обращаться банк для передачи ответа, типа PayPal IPN
+	 */
+	public function polkadot_webhook() {
+
+	    die("polkadot_webhook()");
+	// ...
+
+        }
     }
-
-}
-
-
-
-// https://woocommerce.zymologia.fi/wp-json/kalatori/v1/health
-add_action('rest_api_init', function () {
-    register_rest_route('kalatori/v1', '/health/', array(
-        'methods' => 'POST',
-        'callback' => 'kalatori_health_ajax',
-    ));
-});
-function kalatori_health_ajax(WP_REST_Request $request) {
-    $daemon_url = 'http://localhost:16726';
-    $r=ajax($daemon_url."/order/0/price/0");
-    $json=array(); foreach($r as $n=>$l) $json['daemon_'.$n]=$l;
-    jdie($json);
 }
 
 
 
 
 
+/*
+// Hook in Blocks integration. This action is called in a callback on plugins loaded
+add_action( 'woocommerce_blocks_loaded', 'woocommerce_gateway_polkadot_block_support' );
+
+function woocommerce_gateway_polkadot_block_support() {
+
+    if ( class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+	// require_once plugin_dir_path( __FILE__ ) . '/includes/class-wc-zipmoney-payment-gateway-blocks-support.php';
+	require_once plugin_dir_path( __FILE__ ) . '/Polkadot.class.php';
+
+	// add_action('plugins_loaded', function () {
+	//    die('ee3');
+           add_action( 'woocommerce_blocks_payment_method_type_registration',
+                function ($registry) {
+                    $registry->register( new Automattic\WooCommerce\Blocks\Payments\Integrations\Polkadot() );
+        	});
+	// });
+
+    }
+}
+*/
 
 
-
-add_action('plugins_loaded', function() {
+add_action('plugins_loaded', function () {
   if ( class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
     require_once plugin_dir_path( __FILE__ ) . '/Polkadot.class.php';
     add_action( 'woocommerce_blocks_payment_method_type_registration',
@@ -275,99 +369,223 @@ add_action('plugins_loaded', function() {
 });
 
 
-
-
-add_action( 'woocommerce_store_api_checkout_order_processed', 'polkadot_callback' ); // ,10)
-// Function for `woocommerce_store_api_checkout_order_processed` action-hook.
+/**
+ * Function for `woocommerce_store_api_checkout_order_processed` action-hook.
+ * 
+ * @param \WC_Order $order Order object.
+ *
+ * @return void
+ */
 function polkadot_callback( $order ) {
 
-  $daemon_url = 'http://localhost:16726';
+// return true;
+// die('oki');
 
-  // payment request
-  if(isset($_GET['ajax'])) {
-    $order_id = $order->get_id();
-    $hash = WC()->cart->get_cart_hash();
-    $price = $order->get_total();
-    $currency = $order->get_currency();
-    $status = $order->get_status();
-    $user_id = WC()->session->get_customer_id();
-    $json=array(
-	'order_id' => "wc.".$hash.".".$order_id.".".$user_id,
-	'price' => $price // * $_GET['mul']
-    );
-    $r=ajax($daemon_url."/order/".$json['order_id']."/price/".$json['price']);
-    foreach($r as $n=>$l) $json['daemon_'.$n]=$l;
-
-    $order->set_status('pending', 'Order is saved and pending payment.', true);
-    $order->save();
-
-    jdie($json);
-  }
     // $order->add_order_note( 'LLeo monster: complete' );
+    $order->add_order_note( 'Polkadot daemon: error' );
     // $order->set_status( 'on-hold' );
     // $order->payment_complete();
-    // $order->save();
-    // WC()->cart->subtotal
-    http_response_code(500);
-    die('{"error":"kalatori payment"}');
-    return true;
+    $order->save();
+    // return true;
+
+
+    //=> https://wp-kama.ru/plugin/woocommerce/hook
+    die(""
+	."\n get_id()         :".$order->get_id()
+	."\n get_status                :".$order->get_status()
+	."\n get_total                 :".$order->get_total()
+	."\n get_currency              :".$order->get_currency()
+	."\n get_checkout_payment_url  :".$order->get_checkout_payment_url()
+	."\n has_status('on-hold') == ".intval( $order->has_status( 'on-hold' ))
+	// ."\n get_order_key()  :".$order->get_order_key()
+    );
+
+
     return false;
 }
+// add_action( 'woocommerce_blocks_checkout_order_processed', 'polkadot_callback', 10 );
+add_action( 'woocommerce_store_api_checkout_order_processed', 'polkadot_callback' );
+//=> https://wp-kama.ru/plugin/woocommerce/hook/woocommerce_store_api_checkout_order_processed?ysclid=lsb0do06rf737094715
+
 
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
-  function p($a) {
-    if($a===false) return 'FALSE'."\n";
-    if($a===true) return 'TRUE'."\n";
-    if($a===null) return 'NULL'."\n";
-    if(empty($a)) return 'EMPTY'."\n";
-    if(gettype($a)=='string') return "(string) [".$a."]\n";
-    if(gettype($a)=='integer') return "(integer) [".$a."]\n";
-    return print_r($a,1)."\n";
-  }
 
-  function ejdie($s) { $this->jdie(array('error'=>1,'error_message'=>$s)); }
+// СУКА БЛЯТЬ КАЖЕТСЯ Я ПОЙМАЛ order_id!
+add_action( 'woocommerce_blocks_enqueue_checkout_block_scripts_before', 'polkadot_cath_order_id' );
+function polkadot_cath_order_id() {
+    global $post;
 
-  function jdie($j) { die(json_encode($j)); }
+// die("<pre>UUUUUUUUUUUw: ".print_r($x,1));
 
-  function ajax($url) {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, array(
-        CURLOPT_HTTPHEADER => array('Content-Type:application/json'),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FAILONERROR => true,
-        CURLOPT_CONNECTTIMEOUT => 2, // only spend 3 seconds trying to connect
-        CURLOPT_TIMEOUT => 2 // 30 sec waiting for answer
+/*
+die("<pre>".print_r($post,1));
+
+	."\n get_id()         :".$order->get_id()
+	."\n get_status                :".$order->get_status()
+	."\n get_total                 :".$order->get_total()
+	."\n get_currency              :".$order->get_currency()
+	."\n get_checkout_payment_url  :".$order->get_checkout_payment_url()
+	."\n has_status('on-hold') == ".intval( $order->has_status( 'on-hold' ))
+
+<------><------>// die("id : ".$this->get_id());
+<------><------>return [
+<------><------><------>// 'order_id' => gettype( $this->id ),
+<------><------><------>'root_url'                 => plugins_url('', __FILE__),
+<------><------><------>'title'                    => $this->get_setting( 'title' ),
+<------><------><------>'description'              => $this->get_setting( 'description' )
+<------><------>];
+
+*/
+
+
+
+    echo '<input type="hidden" id="order-id" value="' . esc_attr($GLOBALS['post']->ID) . '">';
+}
+
+
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+add_action('rest_api_init', function () {
+    register_rest_route('polkadot/v1', '/checkout-data/', array(
+        'methods' => 'GET',
+        'callback' => 'polkadot_ajax',
+
+
+        'args' => array(
+            'order_id' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_numeric($param);
+                }
+            ),
+            'additional_param' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    // Perform validation for additional_param if necessary
+                    return true; // Return true if the validation passes
+                }
+            ),
+            // Add more parameters as needed
+        ),
+
+
+        'permission_callback' => function () {
+	    return true;
+            return current_user_can('edit_shop_orders');
+        },
     ));
-    $r = curl_exec($ch);
-    if(curl_errno($ch) || empty($r)) return array('error'=>'connect','error_message'=>curl_error($ch),'url'=>$url);
+});
 
-// file_put_contents("/home/WWW/shop-WooCommerce/www/wp-content/plugins/polkadot-payments-woocommerce/111.log",$r);
+// https://woocommerce.zymologia.fi/wp-json/polkadot/v1/checkout-data?morder_id=12
+
+function polkadot_ajax(WP_REST_Request $request) {
 
 
-    $r = (array)json_decode($r);
-    if(empty($r)) return array('error'=>'json','error_message'=>'Wrong json format','url'=>$url);
-    curl_close($ch);
+    // Assuming the order ID is passed as a query parameter named 'order_id'
+//    $order_id = $request->get_param('order_id');
 
-    // Йобаные патчи для kalatori
-    if(isset($r['order'])) $r['order_id']=$r['order'];
-    if(isset($r['price'])) $r['price']=1*$r['price'];
-    if(isset($r['result'])) {
-        if($r['result']=='waiting') $r['result']='Waiting';
-        if($r['result']=='paid') $r['result']='Paid';
+/*
+    // If the order ID is not provided, you might want to handle this case
+    if (!$order_id) {
+        return new WP_Error('no_order_id', 'Order ID is missing', array('status' =>  400));
     }
-    $r['order_id']=preg_replace("/^.*\_/s",'',$r['order_id']);
-    if( isset($r['mul']) && $r['mul'] < 20 ) $r['mul']=pow(10, $r['mul']);
-    return $r;
-  }
 
-  function logs($s='') { }
+    // Now you can use the $order_id to fetch the order data or perform other actions
+    // ...
 
+    // For example, to get the order object you can use:
+    $order = wc_get_order($order_id);
+
+    // Perform operations with the $order object
+    // ...
+
+    // Return a response
+    return new WP_REST_Response($order->get_data(),  200);
+
+*/
+
+
+    // Your logic to fetch additional checkout data goes here.
+    // For example, you can get the current order ID from the request and use it to retrieve order details.
+//    $order_id = $request->get_param('order_id');
+
+$o='';
+
+    global $post;
+    $order_id = $post->ID;
+
+    $o.="\n\n id.1 = ".$order_id;
+
+    $order_id = get_query_var('order-pay');
+
+    $o.="\n\n id.2 = ".$order_id;
+
+    $order = new WC_Order(); // $post->ID);
+    $order_id = $order->get_id();
+
+    $o.="\n\n id.3 = ".$order_id;
+
+    $order_id = $request->get_param('order_id');
+
+    $o.="\n\n id.4 = ".$order_id;
+
+    $order = wc_get_order(1); // $order_id);
+
+    $o.="\n\n id.4.1 = ".gettype($order).' '.($order===false?'false':'true');
+
+die("oooooooooooooooo:
+[      ".$o."     ]
+
+
+
+
+"
+
+.print_r($request,1)
+// .$order_id
+);
+    $order = wc_get_order($order_id);
+    // Perform any necessary checks or calculations and return the data.
+    return new WP_REST_Response($order->get_data(),  200);
+}
 
 // https://woocommerce.zymologia.fi/wp-json/polkadot/v1/checkout-data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
     die(""
@@ -385,8 +603,10 @@ $order->update_status( 'wc-refunded' );^M
 $order->update_status( 'wc-cancelled', sprintf( 'The zipMoney charge (id:%s) has been cancelled.', $charge->getId() 
 $order->update_status( WC_Zipmoney_Payment_Gateway_Config::ZIP_ORDER_STATUS_AUTHORIZED_KEY );
 $order->update_status( 'cancelled', 'order_note' );
+
 $order->set_status(apply_filters( 'authorize_status', 'on-hold' ),
 $order->set_status( 'on-hold' );
+
 $this->set_processing( 'capture' );
 
 $order->payment_complete( $result->get_capture_id() );
@@ -409,5 +629,3 @@ add_filter( 'woocommerce_valid_order_statuses_for_payment_complete',
 public function filter_add_authorize_order_status_for_payment_complete( $statuses ) {
 ><------>$statuses[] = str_replace( 'wc-', '', WC_Zipmoney_Payment_Gateway_Config::ZIP_ORDER_STATUS_AUTHORIZED_KEY
 */
-
-

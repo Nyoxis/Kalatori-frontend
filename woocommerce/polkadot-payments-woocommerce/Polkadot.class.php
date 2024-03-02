@@ -26,7 +26,6 @@ final class Polkadot extends AbstractPaymentMethodType {
 			'description'=>'Polkadots is a payment method that does not exist'
 		    );
                 }
-
 	}
 
 	public function is_active() {
