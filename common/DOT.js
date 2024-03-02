@@ -10,11 +10,11 @@ daemon: { // тут будет инфо, пришедшая от демона
 chain: { // тут будет инфо, запрошенное от блокчейна
     ss58Format: 0,
     amountAdd: 1.02*10000000000,
-//    tokenDecimals: 10,
+    tokenDecimals: 10,
     mul: 10000000000,
-//    tokenSymbol: "DOT",
-//    existentialDeposit: 1*10000000000,
-//    partialFee: 0.02*10000000000,
+    tokenSymbol: "DOT",
+    existentialDeposit: 1*10000000000,
+    partialFee: 0.02*10000000000,
 },
 
 cx: {}, // а тут инфо от магазина
@@ -157,8 +157,8 @@ presta_init: function(cx) {
     'alert': function(s){
 	var w=DOT.dom('dotpay_console');
 	if(!w) alert('no w: '+s);
-	if(s=='clear') w.innerHTML='';
-	else w.innerHTML+=s+'<br>';
+	if(s=='clear') { w.innerHTML=''; w.style.display='none'; }
+	else { w.innerHTML+=s+'<br>';  w.style.display='block'; }
     },
 
     Ealert: function(s){
@@ -167,9 +167,15 @@ presta_init: function(cx) {
 
     Talert: function(s,deb) {
 	console.log(s);
+	if(!deb && !DOT.debug) return;
+
 	var w=DOT.dom('dotpay_console_test');
-	if(!w) { DOT.alert("<div class='alert Xalert-danger' id='dotpay_console_test'></div>"); w=DOT.dom('dotpay_console_test'); }
-	if(!w) return alert('Dotpayment error: '+s );
+	if(!w) {
+	    if(s=='clear') return; // если не было, то ли не создавать
+	    DOT.alert("<div class='alert Xalert-danger' id='dotpay_console_test'></div>");
+	    w=DOT.dom('dotpay_console_test');
+	    if(!w) return alert('Dotpayment error: '+s );
+	}
 	if(s=='clear') w.innerHTML='';
 	else if(deb || DOT.debug) w.innerHTML+=s+'<br>';
 	w.style.display=(w.innerHTML==''?'none':'block');
@@ -185,13 +191,11 @@ presta_init: function(cx) {
 // daemon_info: function() { return; },
 
 daemon_get_info: async function() {
-    if(!DOT.total()) return;
-    if(!DOT.cx.ajax_url) return alert('DOT plugin error 10802: empty cx.ajax_url');
-    const data = // JSON.stringify({ order_id: DOT.cx.id, price: DOT.cx.total });
-	JSON.stringify({ order_id: 0, price: 0 });
-
+    // if(!DOT.total()) return;
+    if(!DOT.health_url && !DOT.cx.ajax_url) return alert('DOT plugin error 10802: empty cx.ajax_url');
+    const data = JSON.stringify({ order_id: 0, price: 0 });
     DOT.AJAX(
-	DOT.cx.ajax_url,
+	(DOT.health_url?DOT.health_url:DOT.cx.ajax_url),
 	{
 	    async: false,
 	    callback: async function(s) {
@@ -220,11 +224,15 @@ daemon_get_info: async function() {
 		    if(cp.ss58Format || cp.ss58Format===0) DOT.chain.ss58Format=cp.ss58Format;
 		    // mul
 		    if(cp.tokenDecimals) {
-			DOT.chain.tokenDecimals=parseInt(cp.tokenDecimals.toHuman()[0]);
+			var x=cp.tokenDecimals.toHuman();
+			if(x && x[0]) DOT.chain.tokenDecimals=parseInt(x[0]);
 			if(DOT.chain.tokenDecimals) DOT.chain.mul=Math.pow(10, DOT.chain.tokenDecimals);
 		    } if(!DOT.chain.mul) DOT.chain.mul=DOT.daemon.mul;
 		    // имя блокчейна "DOT"
-		    if(cp.tokenSymbol) DOT.chain.tokenSymbol = cp.tokenSymbol.toHuman()[0];
+		    if(cp.tokenSymbol) {
+			var x=cp.tokenSymbol.toHuman();
+			if(x && x[0]) DOT.chain.tokenSymbol = x[0];
+		    }
 		    // цена транзакции
 		    const existentialDeposit = await DOT.api.consts.balances.existentialDeposit;
 		    DOT.chain.existentialDeposit = parseInt(existentialDeposit);
@@ -237,14 +245,14 @@ daemon_get_info: async function() {
 		    // на сколько должна превышать сумма
 		    DOT.chain.amountAdd = DOT.chain.partialFee + DOT.chain.existentialDeposit;
 
-		DOT.amount=DOT.cx.total * DOT.chain.mul;
+		DOT.amount=DOT.total() * DOT.chain.mul;
 		DOT.amount_human=Math.floor(DOT.amount/DOT.chain.mul*10000)/10000+' '+DOT.chain.tokenSymbol; // DOT.daemon.currency_name;
 
 		DOT.dom('dotpay_info').innerHTML=
-	        "Transferring "+DOT.indot( DOT.cx.total*DOT.chain.mul )
+	        "Transferring "+DOT.indot( DOT.total()*DOT.chain.mul )
 		+" would require approximately "+DOT.indot( DOT.chain.partialFee )
 		+" on top of that to cover transaction fees."
-		//    "Amount: "+DOT.indot( DOT.cx.total*DOT.chain.mul + DOT.chain.partialFee)
+		//    "Amount: "+DOT.indot( DOT.total()*DOT.chain.mul + DOT.chain.partialFee)
 		//    +"<br>Covers price of kit(s), transaction fee and deposit in your Polkadot account"
 		+"<br>&nbsp;";
 	    }
@@ -282,6 +290,7 @@ ajax_process_errors: function(s0) {
             }
 
             if( json.redirect ) { window.location = json.redirect; return false; }
+	    if( json.daemon_result=='Paid' && DOT.onpaid ) DOT.onpaid(json);
 	    return json;
 },
 
@@ -293,9 +302,11 @@ total: function() {
     return total;
 },
 
-all_submit: function() {
+all_submit: function(y) {
+    if(!y) DOT.stoploopsubmit=0;
+    else if(DOT.stoploopsubmit) return;
 
-    if(!DOT.total()) return;
+    if(!DOT.total()) return alert('DOT plugin error 0801: empty total');
     // if(cx) DOT.cx=cx; else
     var cx=DOT.cx;
     DOT.alert('clear');
@@ -304,11 +315,12 @@ all_submit: function() {
 
     if(!cx.id && cx.order_id) cx.id=DOT.cx.id=cx.order_id;
     if(!cx.id) return alert('DOT plugin error 0800: empty cx.id');
-    if(!cx.total) return alert('DOT plugin error 0801: empty cx.total');
     if(!cx.ajax_url) return alert('DOT plugin error 0802: empty cx.ajax_url');
 
-    var data = JSON.stringify({ order_id: cx.id, price: cx.total });
-    DOT.AJAX(
+    var data = JSON.stringify({ order_id: cx.id, price: DOT.total() });
+
+    // можно указать свой альтернативный AJAX для особых уродцев типа WooCommerce
+    DOT[( DOT.AJAX_ALTERNATIVE ? 'AJAX_ALTERNATIVE' : 'AJAX' )](
 	cx.ajax_url,
 	async function(s) {
 	    var json=DOT.ajax_process_errors(s); if(!json) return DOT.button_on();
@@ -319,7 +331,7 @@ all_submit: function() {
 		json.pay_account = json.daemon_pay_account;
 		    if(DOT.paidflag) {
 		        DOT.Talert('Ready! Waiting for daemon...');
-			setTimeout(DOT.all_submit,800);
+			setTimeout(function(x){ DOT.all_submit(1); },800);
 		        return;
 		    }
 		    DOT.pay(json);
@@ -384,7 +396,7 @@ progress: {
 		+"</div>";
     },
     stop: function() {
-	clearInterval(DOT.progress.id);
+	clearInterval(DOT.progress.id); DOT.progress.id=false;
 	var q=DOT.dom('dotpay_progress'); if(q) document.body.removeChild(q);
     },
 },
@@ -401,7 +413,6 @@ AJAX: function(url,opt,s) {
       if(this.readyState==4) {
         if(this.status==200 && this.responseText!=null) {
             if(this.callback) this.callback(this.responseText,url,s);
-            // else eval(this.responseText);
         } else if(this.status==500) {
             if(this.onerror) this.onerror(this.responseText,url,s);
             else if(opt.callback) opt.callback(false,url,s);
@@ -453,6 +464,7 @@ AJAX: function(url,opt,s) {
 	transferExtrinsic.signAndSend(SENDER, { signer: injector.signer }, ({ status }) => {
             if(!DOT.progress.id) DOT.progress.run(0,
 		    function(){
+			// alert('progress stop');
 			DOT.alert('Error: timeout');
 			setTimeout(DOT.progress.stop,800);
 		    }); // start progressbar
@@ -462,6 +474,7 @@ AJAX: function(url,opt,s) {
 	        DOT.api.query.system.account( destination ).then((e) => { DOT.Talert('balance isInBlock = '+ e.data.free ); });
 	    } else if (status.isFinalized || status.type == 'Finalized') {
 		DOT.Talert('status:Finalized');
+		DOT.progress.stop();
 		return DOT.payment_done( destination );
 	    } else {
 		DOT.Talert(`status: ${status.type}`);
@@ -499,13 +512,22 @@ AJAX: function(url,opt,s) {
 	    var e = await DOT.api.query.system.account( destination );
 	    DOT.Talert('...balance now: '+ e.data.free );
 	    if(++k > 10) { clearInterval(sin); DOT.Talert('...stop'); }
-	},1000);
+	},2000);
+
+        if(!DOT.progress.id) DOT.progress.run(0,
+		    function(){
+			DOT.stoploopsubmit=1;
+			clearInterval(sin); DOT.Talert('...stop');
+			DOT.alert('Error: timeout');
+			setTimeout(DOT.progress.stop,800);
+			alert('daemon error');
+		    }); // start progressbar
 
 	// DOT.progress.stop();
 	// DOT.disconnect();
 	DOT.Talert('Ping daemon...');
 	DOT.paidflag = 1;
-	DOT.all_submit();
+	DOT.all_submit(1);
     },
 
     pay: async function(json) {
@@ -528,7 +550,7 @@ AJAX: function(url,opt,s) {
 		    var x = await DOT.api.query.system.account( json.pay_account );
 		    x=parseInt(x.data.free);
 		    document.querySelectorAll('.my_dot_balance').forEach((e)=>{e.innerHTML=DOT.indot(x)});
-		    if(x>= DOT.cx.total*DOT.chain.mul) {
+		    if(x>= DOT.total()*DOT.chain.mul) {
 			setTimeout(DOT.all_submit,1000);
 			if(DOT.rebalance_interval) clearInterval(DOT.rebalance_interval);
 		    }
@@ -614,7 +636,9 @@ AJAX: function(url,opt,s) {
 		     +"<input name='dot_addr' type='radio' value='"+DOT.h(l.address)+"'"
 		     +(deff == l.address ? ' checked' : '')
 		     +">&nbsp;&nbsp;<span style='font-weight:bold' title='"+DOT.h(l.address)+"'>"+DOT.h(l.meta.name)+"</span>"
-		     +"<div class='balance'>"+DOT.h(l.address)+"</div>"
+		     +"<div class='balance'>"
+			+"<img src='"+DOT.ajaxm+"'>&nbsp;<span style='font-size:8px;'>"+DOT.h(l.address)+"</span>"
+		      +"</div>"
 		  +"</div>"
 		  +"</label>");
 		  wal_length++;
@@ -672,7 +696,7 @@ AJAX: function(url,opt,s) {
 	    var w=e.closest('LABEL');
 	    w.setAttribute('balanced',1);
 
-	    if( bal < (DOT.cx.total*DOT.chain.mul + DOT.chain.amountAdd) ) {
+	    if( bal < (DOT.total()*DOT.chain.mul + DOT.chain.amountAdd) ) {
 		w.style.opacity='0.5';
 		w.querySelector('INPUT').disabled=true;
 	    }
@@ -724,11 +748,11 @@ AJAX: function(url,opt,s) {
 	DOT.dom('WalletID').querySelectorAll('LABEL').forEach(function(p){
 	    //получить адрес
 	    var adr=p.querySelector('SPAN'); if(!adr) return; adr=adr.getAttribute('title'); // adr.innerHTML;
-	    var oh=p.offsetHeight; if(!oh) oh=42;
-	    oh+='px';
+	    // var oh=p.offsetHeight; if(!oh) oh=42;
+	    // oh+='px';
 	    var div=p.querySelector('.identicon');
-	    div.style.width=oh;
-	    div.style.height=oh;
+	    // div.style.width=oh;
+	    // div.style.height=oh;
 	    div.innerHTML=identicon_render(adr,42);
 //	    p.innerHTML="<div style='display:inline-block; width:"+oh+";height:"+oh+";margin-right:8px;'>"
 //		+identicon_render(adr,42)

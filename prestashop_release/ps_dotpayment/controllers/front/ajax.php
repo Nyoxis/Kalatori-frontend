@@ -144,11 +144,11 @@ class Ps_DotpaymentAjaxModuleFrontController extends ModuleFrontController
 
   function logs($s='') {
     // $f = DIR_LOGS . "polkadot_log.log";
-    $f='/home/presta/log/payments.log';
-    $l=fopen($f,'a+');
-    fputs($l,$s."\n");
-    fclose($l);
-    chmod($f,0666);
+//    $f='/home/presta/log/payments.log';
+//    $l=fopen($f,'a+');
+//    fputs($l,$s."\n");
+//    fclose($l);
+//    chmod($f,0666);
   }
 
 }
