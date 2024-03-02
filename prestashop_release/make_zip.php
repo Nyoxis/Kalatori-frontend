@@ -39,6 +39,7 @@ $s=explode("\n",$s); foreach($s as $l) {
 }
 
 echo "create: [$ZIP]\n";
+
 if(is_file($ZIP)) unlink($ZIP);
 exec("cd \"".$TO."\"; zip -r \"".$ZIP."\" \"./\"");
 chmod($ZIP,0666);
