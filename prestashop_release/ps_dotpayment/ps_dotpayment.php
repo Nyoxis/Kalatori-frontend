@@ -342,8 +342,8 @@ PS_OS_WS_PAYMENT = 11
                     [
                         'name' => 'DOT_URL',
                         'label' => $this->trans('Daemon url', [], 'Modules.Dotpayment.Admin'),
-			'placeholder' => $this->default_url, // http://localhost:16726
-                        'desc' => $this->trans('The daemon URL, if left blank, will default to: '.$this->default_url, [], 'Modules.Dotpayment.Admin'),
+			'placeholder' => $this->DOT_URL_DEFAULT, // http://localhost:16726
+                        'desc' => $this->trans('The daemon URL, if left blank, will default to: '.$this->DOT_URL_DEFAULT, [], 'Modules.Dotpayment.Admin'),
                         'type' => 'text',
                         'required' => false,
                     ],
