@@ -16,12 +16,10 @@ jobs:
       - name: Get filename for prestashop
         run: echo "PSS=ps_dotpayment_$TAG.zip" >> $GITHUB_ENV
       - name: Run make_zip script file for Prestashop
-        working-directory: ./prestashop_release
-        run: ./make_zip.sh $PSS
+        run: ./make_zip.sh prestashop_release/prestashop.txt prestashop_release/ps_dotpayment $PSS
       - name: Get filename for opencart3
         run: echo "OC3=polkadot-opencart3_$TAG.ocmod.zip" >> $GITHUB_ENV
       - name: Run make_zip script file for Opencart3
-        working-directory: ./opencart3_release
-        run: ./make_zip.sh $OC3
+        run: ./make_zip.sh opencart3_release/opencart3.txt opencart3_release/src $OC3
       - name: release
-        run: gh release create -d $TAG ./prestashop_release/$PSS ./opencart3_release/$OC3 --generate-notes
+        run: gh release create -d $TAG $PSS $OC3 --generate-notes
